@@ -43,7 +43,7 @@ impl Accounts {
         match self.get(account) {
             Some(acc) => match acc {
                 TOTP(totp) => Some(totp.get_otp(ic::time() / 1_000_000_000).to_string()),
-                HOTP(hotp, _) => Some(hotp.get_otp(ic::time() / 1_000_000_000).to_string()),
+                HOTP(hotp, counter) => Some(hotp.get_otp(counter).to_string()),
             },
             None => None,
         }
@@ -125,7 +125,7 @@ mod tests {
 
         let r1 = c
             .new_call("register_otp")
-            .with_arg(("test".to_string(), "otpauth://totp/ossian:self@ossian.dev?secret=NICE&issuer=ossian&algorithm=SHA1&digits=6&period=30".to_string()))
+            .with_args(("test".to_string(), "otpauth://totp/ossian:self@ossian.dev?secret=NICE&issuer=ossian&algorithm=SHA1&digits=6&period=30".to_string()))
             .perform()
             .await
             .decode_one::<Result<(), String>>()
@@ -135,12 +135,20 @@ mod tests {
 
         let r2 = c
             .new_call("get_otp")
-            .with_arg(("test".to_string(),))
+            .with_arg("test".to_string())
             .perform()
             .await
             .decode_one::<Result<String, String>>()
             .unwrap();
 
-        println!("{:?}", r2);
+        let r3 = c
+            .new_call("get_otp")
+            .with_arg("test".to_string())
+            .perform()
+            .await
+            .decode_one::<Result<String, String>>()
+            .unwrap();
+
+        assert_eq!(r2, r3)
     }
 }
