@@ -22,8 +22,10 @@ make ic
 
 ### Registering an account
 
+Accounts are registered using an otpauth URI. This can be as verbose as needed, or left to the defaults like most services (discord shown below) utilize.  
+
 ```
-dfx canister --network ic call otp register_otp '(
+dfx canister call otp register_otp '(
     "discord", 
     "otpauth://totp/discord:username#1234?secret=000011112222"
   )'
