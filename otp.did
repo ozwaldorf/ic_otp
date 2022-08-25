@@ -1,0 +1,10 @@
+type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok; Err : text };
+service : () -> {
+  add_custodian : (principal) -> ();
+  custodians : () -> (vec principal) query;
+  get_otp : (text) -> (Result);
+  register_otp : (text, text) -> (Result_1);
+  remove_custodian : (principal) -> ();
+  remove_otp : (text) -> ();
+}

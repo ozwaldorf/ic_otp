@@ -1,0 +1,15 @@
+[package]
+name = "ic_otp"
+version = "1.0.0"
+edition = "2021"
+authors = ["Ossian Mapes <self@ossian.dev>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+xotp = {git = "https://github.com/ozwaldorf/xotp.git", branch = "patch-1"}
+ic-kit = {git = "https://github.com/psychedelic/ic-kit.git"}
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"

@@ -1,0 +1,5 @@
+.dfx
+.vscode
+target
+*.old*
+Cargo.lock
