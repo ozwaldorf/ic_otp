@@ -1,4 +1,8 @@
-use ic_kit::{candid::CandidType, prelude::*};
+use ic_kit::{
+    candid::CandidType,
+    prelude::*,
+    stable::{stable_restore, stable_store},
+};
 use std::collections::HashMap;
 use xotp::util::{
     parse_otpauth_uri,
@@ -97,12 +101,12 @@ pub fn remove_otp(accounts: &mut Accounts, name: String) {
 
 #[pre_upgrade]
 pub fn pre_upgrade(accounts: &mut Accounts) {
-    ic_kit::stable::stable_store((accounts,));
+    stable_store((accounts,)).unwrap();
 }
 
 #[post_upgrade]
 pub fn post_upgrade() {
-    let (accounts,): (Accounts,) = ic_kit::stable::stable_restore().unwrap();
+    let (accounts,): (Accounts,) = stable_restore().unwrap();
     ic::swap(accounts);
 }
 

@@ -23,22 +23,22 @@ make ic
 ### Registering an account
 
 ```
-dfx canister call otp register_otp '(
-    "test", 
-    "otpauth://totp/ossian:self@ossian.dev?secret=NICE&issuer=ossian&algorithm=SHA1&digits=6&period=30"
-  )' 
+dfx canister --network ic call otp register_otp '(
+    "discord", 
+    "otpauth://totp/discord:username#1234?secret=000011112222"
+  )'
 ```
 
 ### Getting a OTP code
 
 ```
-dfx canister call otp get_otp "test"
+dfx canister call otp get_otp "discord"
 ```
 
 ### Removing an account
 
 ```
-dfx canister call otp remove_otp "test"
+dfx canister call otp remove_otp "discord"
 ```
 
 ## Developing in the repository
