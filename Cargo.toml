@@ -9,6 +9,8 @@ authors = ["Ossian Mapes <self@ossian.dev>"]
 [dependencies]
 xotp = {git = "https://github.com/ozwaldorf/xotp.git", branch = "patch-1"}
 ic-kit = {git = "https://github.com/psychedelic/ic-kit.git"}
+candid = "0.7"
+serde = "1.0"
 
 [lib]
 crate-type = ["cdylib"]

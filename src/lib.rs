@@ -1,12 +1,12 @@
-use ic_kit::prelude::*;
+use ic_kit::{candid::CandidType, prelude::*};
 use std::collections::HashMap;
 use xotp::util::{
     parse_otpauth_uri,
     ParseResult::{self, *},
 };
 
-#[derive(Default)]
-pub struct Accounts(Vec<Principal>, HashMap<String, ParseResult>);
+#[derive(Default, CandidType, Deserialize, Serialize)]
+pub struct Accounts(Vec<Principal>, HashMap<String, String>);
 impl Accounts {
     pub fn custodians(&self) -> Vec<Principal> {
         self.0.clone()
@@ -20,7 +20,7 @@ impl Accounts {
         self.0.retain(|x| x != &caller);
     }
 
-    pub fn insert(&mut self, name: String, account: ParseResult) {
+    pub fn insert(&mut self, name: String, account: String) {
         self.1.insert(name, account);
     }
 
@@ -28,13 +28,16 @@ impl Accounts {
         self.1.remove(&name);
     }
 
-    pub fn get(&self, account: &str) -> Option<&ParseResult> {
-        self.1.get(account)
+    pub fn get(&self, account: &str) -> Option<ParseResult> {
+        match self.1.get(account) {
+            Some(x) => Some(parse_otpauth_uri(x).unwrap()),
+            None => None,
+        }
     }
 
     pub fn get_otp(&self, account: &str) -> Option<String> {
         match self.get(account) {
-            Some(acc) => match acc.clone() {
+            Some(acc) => match acc {
                 TOTP(totp) => Some(totp.get_otp(ic::time() / 1_000_000_000).to_string()),
                 HOTP(hotp, _) => Some(hotp.get_otp(ic::time() / 1_000_000_000).to_string()),
             },
@@ -81,8 +84,8 @@ pub fn get_otp(accounts: &mut Accounts, name: String) -> Result<String, String> 
 
 #[update(guard = "custodian")]
 pub fn register_otp(accounts: &mut Accounts, name: String, uri: String) -> Result<(), String> {
-    let account = parse_otpauth_uri(uri.as_str()).map_err(|e| format!("{e:?}"))?;
-    accounts.insert(name, account);
+    parse_otpauth_uri(uri.as_str()).map_err(|e| format!("{e:?}"))?;
+    accounts.insert(name, uri);
 
     Ok(())
 }
@@ -90,6 +93,17 @@ pub fn register_otp(accounts: &mut Accounts, name: String, uri: String) -> Resul
 #[update(guard = "custodian")]
 pub fn remove_otp(accounts: &mut Accounts, name: String) {
     accounts.remove(name);
+}
+
+#[pre_upgrade]
+pub fn pre_upgrade(accounts: &mut Accounts) {
+    ic_kit::stable::stable_store((accounts,));
+}
+
+#[post_upgrade]
+pub fn post_upgrade() {
+    let (accounts,): (Accounts,) = ic_kit::stable::stable_restore().unwrap();
+    ic::swap(accounts);
 }
 
 #[derive(KitCanister)]
@@ -105,7 +119,7 @@ mod tests {
         let c = replica.add_canister(OTPCanister::anonymous());
         c.init().await;
 
-        let r = c
+        let r1 = c
             .new_call("register_otp")
             .with_arg(("test".to_string(), "otpauth://totp/ossian:self@ossian.dev?secret=NICE&issuer=ossian&algorithm=SHA1&digits=6&period=30".to_string()))
             .perform()
@@ -113,7 +127,7 @@ mod tests {
             .decode_one::<Result<(), String>>()
             .unwrap();
 
-        assert_eq!(r, Ok(()));
+        assert_eq!(r1, Ok(()));
 
         let r2 = c
             .new_call("get_otp")
