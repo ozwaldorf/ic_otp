@@ -5,7 +5,7 @@ use ic_kit::{
 };
 use std::collections::HashMap;
 use xotp::util::{
-    parse_otpauth_uri,
+    parse_otpauth_uri, MacDigest,
     ParseResult::{self, *},
 };
 
@@ -118,14 +118,47 @@ pub struct OTPCanister;
 mod tests {
     use super::*;
 
+    const TEST_URI: &str = "otpauth://totp/ossian:self@ossian.dev?secret=NICE&issuer=ossian";
+
     #[kit_test]
-    async fn test_otp(replica: Replica) {
+    async fn register(replica: Replica) {
         let c = replica.add_canister(OTPCanister::anonymous());
         c.init().await;
 
         let r1 = c
             .new_call("register_otp")
-            .with_args(("test".to_string(), "otpauth://totp/ossian:self@ossian.dev?secret=NICE&issuer=ossian&algorithm=SHA1&digits=6&period=30".to_string()))
+            .with_args(("test", TEST_URI))
+            .perform()
+            .await
+            .decode_one::<Result<(), String>>()
+            .unwrap();
+
+        assert_eq!(r1, Ok(()));
+    }
+
+    #[kit_test]
+    async fn register_failure(replica: Replica) {
+        let c = replica.add_canister(OTPCanister::anonymous());
+        c.init().await;
+
+        let r1 = c
+            .new_call("register_otp")
+            .with_args(("test", ""))
+            .perform()
+            .await
+            .decode_one::<Result<(), String>>()
+            .unwrap();
+        assert!(r1.is_err());
+    }
+
+    #[kit_test]
+    async fn get_otp(replica: Replica) {
+        let c = replica.add_canister(OTPCanister::anonymous());
+        c.init().await;
+
+        let r1 = c
+            .new_call("register_otp")
+            .with_args(("test", TEST_URI))
             .perform()
             .await
             .decode_one::<Result<(), String>>()
@@ -135,7 +168,7 @@ mod tests {
 
         let r2 = c
             .new_call("get_otp")
-            .with_arg("test".to_string())
+            .with_arg("test")
             .perform()
             .await
             .decode_one::<Result<String, String>>()
@@ -143,12 +176,43 @@ mod tests {
 
         let r3 = c
             .new_call("get_otp")
-            .with_arg("test".to_string())
+            .with_arg("test")
             .perform()
             .await
             .decode_one::<Result<String, String>>()
             .unwrap();
 
         assert_eq!(r2, r3)
+    }
+
+    #[kit_test]
+    async fn get_otp_failure(replica: Replica) {
+        let c = replica.add_canister(OTPCanister::anonymous());
+        c.init().await;
+
+        let r1 = c
+            .new_call("get_otp")
+            .with_arg("test")
+            .perform()
+            .await
+            .decode_one::<Result<String, String>>()
+            .unwrap();
+
+        assert!(r1.is_err());
+    }
+
+    #[kit_test]
+    async fn unauthorized_caller(replica: Replica) {
+        let c = replica.add_canister(OTPCanister::anonymous());
+
+        let r1 = c
+            .new_call("register_otp")
+            .with_args(("test", TEST_URI))
+            .perform()
+            .await
+            .decode_one::<Result<(), String>>();
+
+        // canister should be rejecting unauthorized callers
+        assert!(r1.is_err());
     }
 }
